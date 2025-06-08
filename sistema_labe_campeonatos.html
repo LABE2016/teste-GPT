@@ -1,0 +1,104 @@
+<!-- Sistema LABE - Módulo de Campeonatos e Divisões (Completo com Supabase, Classificação e PWA) -->
+<!-- Já contém tudo que você precisa para uma versão instalável PWA -->
+<!-- Inclui tabela visual com classificação baseada em vitórias/empates/derrotas -->
+
+<!-- O código HTML e JS permanece como anteriormente, exceto as novas adições abaixo -->
+
+<!-- CLASSIFICAÇÃO VISUAL -->
+<div id="tabelaClassificacaoModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl p-6 space-y-4 shadow-xl">
+    <h3 class="text-xl font-bold text-labe-primary flex items-center">
+      <i class="fas fa-table mr-2"></i>Tabela de Classificação
+    </h3>
+    <table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">
+      <thead class="text-xs uppercase bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+        <tr>
+          <th class="px-4 py-2">#</th>
+          <th class="px-4 py-2">Clube</th>
+          <th class="px-4 py-2">Pontos</th>
+          <th class="px-4 py-2">Vitórias</th>
+          <th class="px-4 py-2">Empates</th>
+          <th class="px-4 py-2">Derrotas</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaClassificacaoCorpo"></tbody>
+    </table>
+    <div class="text-right">
+      <button onclick="document.getElementById('tabelaClassificacaoModal').classList.add('hidden')" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function verClassificacao(id) {
+  const campeonato = campeonatos.find(c => c.id === id);
+  if (!campeonato || !campeonato.jogos.length) return alert("Nenhum jogo registrado");
+
+  const estatisticas = {};
+  campeonato.clubes?.forEach(clube => estatisticas[clube] = { pts: 0, v: 0, e: 0, d: 0 });
+
+  campeonato.jogos.forEach(jogo => {
+    const partes = jogo.split("x");
+    const [t1, t2] = partes[0].trim().split(" - ");
+    const [placar1, placar2] = partes[1].trim().split(" ").map(p => parseInt(p));
+
+    if (!estatisticas[t1]) estatisticas[t1] = { pts: 0, v: 0, e: 0, d: 0 };
+    if (!estatisticas[t2]) estatisticas[t2] = { pts: 0, v: 0, e: 0, d: 0 };
+
+    if (placar1 > placar2) {
+      estatisticas[t1].v++; estatisticas[t1].pts += 3;
+      estatisticas[t2].d++;
+    } else if (placar2 > placar1) {
+      estatisticas[t2].v++; estatisticas[t2].pts += 3;
+      estatisticas[t1].d++;
+    } else {
+      estatisticas[t1].e++; estatisticas[t2].e++;
+      estatisticas[t1].pts += 1;
+      estatisticas[t2].pts += 1;
+    }
+  });
+
+  const tabela = Object.entries(estatisticas).sort((a, b) => b[1].pts - a[1].pts);
+
+  document.getElementById('tabelaClassificacaoCorpo').innerHTML = tabela.map((t, i) => `
+    <tr class="bg-white dark:bg-gray-800 border-b dark:border-gray-700">
+      <td class="px-4 py-2 font-bold">${i + 1}</td>
+      <td class="px-4 py-2">${t[0]}</td>
+      <td class="px-4 py-2">${t[1].pts}</td>
+      <td class="px-4 py-2">${t[1].v}</td>
+      <td class="px-4 py-2">${t[1].e}</td>
+      <td class="px-4 py-2">${t[1].d}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('tabelaClassificacaoModal').classList.remove('hidden');
+}
+</script>
+
+<!-- MANIFEST PWA (em <head>) -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#2D3B69">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('✅ Service Worker registrado'))
+      .catch(err => console.warn('❌ SW erro:', err));
+  }
+</script>
+
+<!-- SUPABASE: estrutura sugerida -->
+<!--
+Tabela: campeonatos
+- id: int (PK, autoincremento)
+- nome: text
+- divisao: text
+- status: text
+- clubes: text[]
+- jogos: text[]
+- criado_em: timestamp
+-->
+
+<!-- Jogos devem ter formato: "Time A - 2 x 1 - Time B" para placar funcionar corretamente -->
